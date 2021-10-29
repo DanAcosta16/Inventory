@@ -123,34 +123,34 @@ private:
 	string _street;
 	string _city;
 	string _state;
-	string _zip;
+	int _zip;
 public:
 	Address(){}
-	Address(string str, string c, string s, string z): _street(str), _city(c), _state(s), _zip(z){}
+	Address(string str, string c, string s, int z): _street(str), _city(c), _state(s), _zip(z){}
 	void setStreet(string str){_street = str;}
 	void setCity(string c){_city = c;}
 	void setState(string s){_state = s;}
-	void setZip(string z){_zip = z;}
+	void setZip(int z){_zip = z;}
 	string getStreet(){return _street;}
 	string getCity(){return _city;}
 	string getState(){return _state;}
-	string getZip(){return _zip;}
+	int getZip(){return _zip;}
 };
 
 class Customer{
 private:
-	string _cnum;
+	int _cnum;
 	Address _addr;
 public:
 	Customer(){}
-	Customer(string cnum, string str, string c, string s, string z);
+	Customer(int cnum, string str, string c, string s, int z);
 	void setAddress(Address adr){_addr = adr;}
-	void setCnum(string cnum){_cnum = cnum;}
+	void setCnum(int cnum){_cnum = cnum;}
 	Address getAddress(){return _addr;}
-	string getCnum(){return _cnum;}
+	int getCnum(){return _cnum;}
 };
 
-Customer::Customer(string cnum, string str, string c, string s, string z){
+Customer::Customer(int cnum, string str, string c, string s, int z){
 	_cnum = cnum;
 	_addr.setStreet(str);
 	_addr.setCity(c);
@@ -175,6 +175,28 @@ AllCustomers::AllCustomers(const AllCustomers& b){
 	}
 }
 
+AllCustomers::~AllCustomers(){
+	for(int i=0; i < _customers.size(); i++){
+		delete _customers[i];
+	}
+}
+void AllCustomers::addCustomer(int cnum, string str, string c, string s, int z){
+	Customer* ptr = new Customer(cnum, str, c, s, z);
+	_customers.push_back(ptr);
+}
+
+bool AllCustomers::deleteCustomer(int cnum){
+	bool found = false;
+	for(int i=0; (i < _customers.size() && !found); i++){
+		if (_customers[i] ->getCnum() == cnum){
+			found = true;
+			delete _customers[i];
+			_customers.erase(_customers.begin() + i);
+		}
+	}
+	return found;
+}
+
 class AllOrders{
 private:
 	vector<Order*> _orders;
@@ -182,7 +204,7 @@ public:
 
 };
 
-void initializeData(ifstream& infile, Inventory& inv){
+void initializeInventory(ifstream& infile, Inventory& inv){
 	string part;
 	getline(infile, part);
 	while(part != "0, 0, 0"){
@@ -202,6 +224,29 @@ void initializeData(ifstream& infile, Inventory& inv){
 	}
 }
 
+void initializeCustomers(ifstream& infile, AllCustomers& cust){
+	string customer;
+	getline(infile, customer);
+	while(customer != "0, 0, 0, 0, 0"){
+		vector<string> v;
+		stringstream ss(customer);
+		while (ss.good()) {
+			string substr;
+			getline(ss, substr, ',');
+			v.push_back(substr);
+		}
+		string a = v[0];
+		stringstream toIntCnum(a);
+		int custNum = 0;
+		toIntCnum >> custNum;
+		string b = v[4];
+		stringstream toIntZip(b);
+		int zip = 0;
+		toIntZip >> zip;
+		cust.addCustomer(custNum, v[1], v[2], v[3], zip);
+		getline(infile, customer);
+	}
+}
 
 int main() {
 	ifstream infile("datafile.txt");
@@ -210,6 +255,8 @@ int main() {
 		exit(-1);
 	}
 	Inventory init;
-	initializeData(infile, init);
+	initializeInventory(infile, init);
+	AllCustomers custInit;
+	initializeCustomers(infile, custInit);
 	return 0;
 }
