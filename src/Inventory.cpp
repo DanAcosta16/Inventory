@@ -65,6 +65,7 @@ const Inventory& Inventory::operator=(const Inventory& b){
 		}
 
 	}
+	return *this;
 }
 
 void Inventory::addPart(string p, string d, int s){
@@ -98,24 +99,43 @@ void Inventory::printInventory(ostream& os) const {
 
 class Order{
 private:
-	int _ordnum;
-	string _cname;
+	string _ordnum;
+	string _cnum;
 	vector<string> _parts;
 	vector<int> _qtys;
 public:
 	Order();
-	void setOrdnum(int o){_ordnum = o;}
-	void setName(string c){_cname = c;}
-	int getOrdnum(){return _ordnum;}
-	string getName(){return _cname;}
+	Order(string o, string c, vector<string> p, vector<int> q): _ordnum(o), _cnum(c), _parts(p), _qtys(q){}
+	void setOrdnum(string o){_ordnum = o;}
+	void setName(string c){_cnum = c;}
+	string getOrdnum(){return _ordnum;}
+	string getCnum(){return _cnum;}
+	string getParts(int index){return _parts[index];}
+	int getQty(int index){return _qtys[index];}
+	int getSize(){return _parts.size();}
 	void addPart(string p, int q){
 		_parts.push_back(p);
 		_qtys.push_back(q);
 	}
-	void print(ofstream&);
+	bool deletePart(string, int);
+	void print();
 };
-void Order::print(ofstream& os){
 
+bool Order::deletePart(string p, int q){
+	bool found = false;
+	for (int i=0; (i < _parts.size() && !found); i++){
+		if((_parts[i] == p) && (_qtys[i] == q)){
+			found = true;
+			_parts.erase(_parts.begin() + i);
+			_qtys.erase(_qtys.begin() + i);
+		}
+	}
+	return found;
+}
+void Order::print(){
+	for(int i = 0; i < _parts.size(); i++){
+		cout << _parts[i];
+	}
 }
 
 class Address{
@@ -123,34 +143,33 @@ private:
 	string _street;
 	string _city;
 	string _state;
-	int _zip;
+	string _zip;
 public:
 	Address(){}
-	Address(string str, string c, string s, int z): _street(str), _city(c), _state(s), _zip(z){}
+	Address(string str, string c, string s, string z): _street(str), _city(c), _state(s), _zip(z){}
 	void setStreet(string str){_street = str;}
 	void setCity(string c){_city = c;}
 	void setState(string s){_state = s;}
-	void setZip(int z){_zip = z;}
+	void setZip(string z){_zip = z;}
 	string getStreet(){return _street;}
 	string getCity(){return _city;}
 	string getState(){return _state;}
-	int getZip(){return _zip;}
+	string getZip(){return _zip;}
 };
 
 class Customer{
 private:
-	int _cnum;
+	string _cnum;
 	Address _addr;
 public:
 	Customer(){}
-	Customer(int cnum, string str, string c, string s, int z);
-	void setAddress(Address adr){_addr = adr;}
-	void setCnum(int cnum){_cnum = cnum;}
-	Address getAddress(){return _addr;}
-	int getCnum(){return _cnum;}
+	Customer(string cnum, string str, string c, string s, string z);
+	void setCnum(string cnum){_cnum = cnum;}
+	string getCnum(){return _cnum;}
+	Address getAddr(){return _addr;}
 };
 
-Customer::Customer(int cnum, string str, string c, string s, int z){
+Customer::Customer(string cnum, string str, string c, string s, string z){
 	_cnum = cnum;
 	_addr.setStreet(str);
 	_addr.setCity(c);
@@ -165,8 +184,9 @@ public:
 	AllCustomers(const AllCustomers& b);
 	~AllCustomers();
 	const AllCustomers& operator=(const AllCustomers& b);
-	void addCustomer(int, string, string, string, int);
-	bool deleteCustomer(int);
+	void addCustomer(string, string, string, string, string);
+	bool deleteCustomer(string);
+	void printCustomers(ostream& os) const;
 };
 
 AllCustomers::AllCustomers(const AllCustomers& b){
@@ -180,15 +200,15 @@ AllCustomers::~AllCustomers(){
 		delete _customers[i];
 	}
 }
-void AllCustomers::addCustomer(int cnum, string str, string c, string s, int z){
+void AllCustomers::addCustomer(string cnum, string str, string c, string s, string z){
 	Customer* ptr = new Customer(cnum, str, c, s, z);
 	_customers.push_back(ptr);
 }
 
-bool AllCustomers::deleteCustomer(int cnum){
+bool AllCustomers::deleteCustomer(string cnum){
 	bool found = false;
 	for(int i=0; (i < _customers.size() && !found); i++){
-		if (_customers[i] ->getCnum() == cnum){
+		if (_customers[i]->getCnum() == cnum){
 			found = true;
 			delete _customers[i];
 			_customers.erase(_customers.begin() + i);
@@ -197,12 +217,81 @@ bool AllCustomers::deleteCustomer(int cnum){
 	return found;
 }
 
+void AllCustomers::printCustomers(ostream& os) const {
+	os << "\nCurrent Customer List" << endl;
+	os << _customers.size() << endl;
+	for(int i = 0; i < _customers.size(); i++){
+		os << "Customer Number: " << _customers[i]->getCnum() << " Street Name: " << _customers[i]->getAddr().getStreet() <<
+				" City: " << _customers[i]->getAddr().getCity() << " State: " << _customers[i]->getAddr().getState() <<
+				" Zip: " << _customers[i]->getAddr().getZip() << endl;
+	}
+}
+
 class AllOrders{
 private:
 	vector<Order*> _orders;
 public:
-
+	AllOrders(){}
+	AllOrders(const AllOrders& b);
+	~AllOrders();
+	const AllOrders& operator=(const AllOrders& b);
+	void addOrder(string, string, vector<string>, vector<int>);
+	bool deleteOrder(string, string);
+	void printOrders(ostream& os) const;
 };
+
+AllOrders::AllOrders(const AllOrders& b){
+	for (int i=0; i < b._orders.size(); i++){
+		_orders.push_back(new Order(*(b._orders[i])));
+	}
+}
+
+AllOrders::~AllOrders(){
+	for(int i=0; i < _orders.size(); i++){
+		delete _orders[i];
+	}
+}
+
+const AllOrders& AllOrders::operator=(const AllOrders& b){
+	if(this != &b){
+		for(int i=0; i < b._orders.size(); i++){
+			delete b._orders[i];
+		}
+		for(int i=0; i < b._orders.size(); i++){
+			_orders.push_back(new Order(*(b._orders[i])));
+		}
+	}
+	return *this;
+}
+
+void AllOrders::addOrder(string o, string c, vector<string> p, vector<int> q){
+	Order* ptr = new Order(o, c, p, q);
+	_orders.push_back(ptr);
+}
+
+bool AllOrders::deleteOrder(string o, string c){
+	bool found = false;
+	for(int i=0; (i < _orders.size() && !found); i++){
+		if((_orders[i]->getOrdnum() == o) && (_orders[i]->getCnum() == c)){
+			found = true;
+			delete _orders[i];
+			_orders.erase(_orders.begin() + i);
+		}
+	}
+	return found;
+}
+
+void AllOrders::printOrders(ostream& os) const {
+//	os << "\nCurrent Order List" << endl;
+//	os << _orders.size() << endl;
+//	for(int i=0; i < _orders.size(); i++){
+//		os << "Order Number: " << _orders[i]->getOrdnum() << " Customer Number: " << _orders[i]->getCnum() << endl;
+//		for(int j = 0; j < _orders[i]->getSize(); j++){
+//			os << "Part: " << _orders[i]->getParts(j) << "Quantity: " << _orders[i]->getQty(j) << endl;
+//		}
+//	}
+	_orders[0]->print();
+}
 
 void initializeInventory(ifstream& infile, Inventory& inv){
 	string part;
@@ -215,11 +304,8 @@ void initializeInventory(ifstream& infile, Inventory& inv){
 			getline(ss, substr, ',');
 			v.push_back(substr);
 		}
-		string p = v[2];
-		stringstream toInt(p);
-		int partStock = 0;
-		toInt >> partStock;
-		inv.addPart(v[0], v[1], partStock);
+		int stock = stoi(v[2]);
+		inv.addPart(v[0], v[1], stock);
 		getline(infile, part);
 	}
 }
@@ -235,16 +321,41 @@ void initializeCustomers(ifstream& infile, AllCustomers& cust){
 			getline(ss, substr, ',');
 			v.push_back(substr);
 		}
-		string a = v[0];
-		stringstream toIntCnum(a);
-		int custNum = 0;
-		toIntCnum >> custNum;
-		string b = v[4];
-		stringstream toIntZip(b);
-		int zip = 0;
-		toIntZip >> zip;
-		cust.addCustomer(custNum, v[1], v[2], v[3], zip);
+		cust.addCustomer(v[0], v[1], v[2], v[3], v[4]);
 		getline(infile, customer);
+	}
+}
+
+void initializeOrders(ifstream& infile, AllOrders& orders){
+	string order;
+	getline(infile, order);
+	while(order != "0, 0"){
+		vector<string> v;
+		stringstream ss(order);
+		while (ss.good()){
+			string substr;
+			getline(ss, substr, ',');
+			v.push_back(substr);
+		}
+		vector<string> parts;
+		vector<int> qtys;
+		string contents;
+		getline(infile, contents);
+		while(contents != "0, 0"){
+			vector<string> c;
+			stringstream ss(contents);
+			while (ss.good()){
+				string substr;
+				getline(ss, substr, ',');
+				v.push_back(substr);
+			}
+			int qty = stoi(v[1]);
+			parts.push_back(v[0]);
+			qtys.push_back(qty);
+			getline(infile, contents);
+		}
+		orders.addOrder(v[0], v[1], parts, qtys);
+		getline(infile, order);
 	}
 }
 
@@ -254,9 +365,14 @@ int main() {
 		cout << "Unable to get file" << endl;
 		exit(-1);
 	}
-	Inventory init;
-	initializeInventory(infile, init);
+	Inventory invInit;
+	initializeInventory(infile, invInit);
 	AllCustomers custInit;
 	initializeCustomers(infile, custInit);
+//	custInit.printCustomers(cout);
+	AllOrders ordInit;
+	initializeOrders(infile, ordInit);
+//	ordInit.printOrders(cout);
+	ordInit.printOrders(cout);
 	return 0;
 }
