@@ -86,14 +86,10 @@ bool Inventory::deletePart(string p){
 }
 
 void Inventory::printInventory(ostream& os) const {
-	os << "\nCurrent Inventory File" << endl;
-	os << _inv.size() << endl;
+	os << "\nCurrent Inventory Size: " << _inv.size() << endl;
 	for (int i = 0; i < _inv.size(); i++){
 		os << "Part: " << _inv[i]->getPartNum() <<
-			"  Stock Qty: " << _inv[i]->getStock() << endl;
-		//os << &(*_inv[i]) << endl;  -or-
-		//os << _inv[i] << endl;
-		os << &(_inv[i]) << endl;
+			"  Stock Quantity: " << _inv[i]->getStock() << endl;
 	}
 }
 
@@ -111,6 +107,7 @@ public:
 	string getOrdnum(){return _ordnum;}
 	string getCnum(){return _cnum;}
 	string getParts(int index){return _parts[index];}
+	vector<string> getPartsV(){return _parts;}
 	int getQty(int index){return _qtys[index];}
 	int getSize(){return _parts.size();}
 	void addPart(string p, int q){
@@ -218,12 +215,11 @@ bool AllCustomers::deleteCustomer(string cnum){
 }
 
 void AllCustomers::printCustomers(ostream& os) const {
-	os << "\nCurrent Customer List" << endl;
-	os << _customers.size() << endl;
+	os << "\nCurrent Customer List Size: " << _customers.size() << endl;
 	for(int i = 0; i < _customers.size(); i++){
-		os << "Customer Number: " << _customers[i]->getCnum() << " Street Name: " << _customers[i]->getAddr().getStreet() <<
-				" City: " << _customers[i]->getAddr().getCity() << " State: " << _customers[i]->getAddr().getState() <<
-				" Zip: " << _customers[i]->getAddr().getZip() << endl;
+		os << "|| Customer Number: " << _customers[i]->getCnum() << "|| Street Name: " << _customers[i]->getAddr().getStreet() <<
+				"|| City: " << _customers[i]->getAddr().getCity() << "|| State: " << _customers[i]->getAddr().getState() <<
+				"|| Zip: " << _customers[i]->getAddr().getZip() << " ||" << endl;
 	}
 }
 
@@ -236,7 +232,7 @@ public:
 	~AllOrders();
 	const AllOrders& operator=(const AllOrders& b);
 	void addOrder(string, string, vector<string>, vector<int>);
-	bool deleteOrder(string, string);
+	bool deleteOrder(string);
 	void printOrders(ostream& os) const;
 };
 
@@ -269,10 +265,10 @@ void AllOrders::addOrder(string o, string c, vector<string> p, vector<int> q){
 	_orders.push_back(ptr);
 }
 
-bool AllOrders::deleteOrder(string o, string c){
+bool AllOrders::deleteOrder(string o){
 	bool found = false;
 	for(int i=0; (i < _orders.size() && !found); i++){
-		if((_orders[i]->getOrdnum() == o) && (_orders[i]->getCnum() == c)){
+		if(_orders[i]->getOrdnum() == o){
 			found = true;
 			delete _orders[i];
 			_orders.erase(_orders.begin() + i);
@@ -282,15 +278,15 @@ bool AllOrders::deleteOrder(string o, string c){
 }
 
 void AllOrders::printOrders(ostream& os) const {
-//	os << "\nCurrent Order List" << endl;
-//	os << _orders.size() << endl;
-//	for(int i=0; i < _orders.size(); i++){
-//		os << "Order Number: " << _orders[i]->getOrdnum() << " Customer Number: " << _orders[i]->getCnum() << endl;
-//		for(int j = 0; j < _orders[i]->getSize(); j++){
-//			os << "Part: " << _orders[i]->getParts(j) << "Quantity: " << _orders[i]->getQty(j) << endl;
-//		}
-//	}
-	_orders[0]->print();
+	os << "\nCurrent Order List Size: " << _orders.size() << endl;
+	for(int i=0; i < _orders.size(); i++){
+		os << "ORDER NUMBER: " << _orders[i]->getOrdnum() << " || CUSTOMER NUMBER: " << _orders[i]->getCnum() << endl;
+		for(int j = 0; j < _orders[i]->getSize(); j++){
+			os << "|| Part: " << _orders[i]->getParts(j) << " Quantity: " << _orders[i]->getQty(j) << " ||" << endl;
+		}
+		cout << "\n";
+	}
+//	_orders[0]->print();
 }
 
 void initializeInventory(ifstream& infile, Inventory& inv){
@@ -342,21 +338,140 @@ void initializeOrders(ifstream& infile, AllOrders& orders){
 		string contents;
 		getline(infile, contents);
 		while(contents != "0, 0"){
-			vector<string> c;
+			vector<string> temp;
 			stringstream ss(contents);
 			while (ss.good()){
 				string substr;
 				getline(ss, substr, ',');
-				v.push_back(substr);
+				temp.push_back(substr);
 			}
-			int qty = stoi(v[1]);
-			parts.push_back(v[0]);
+			int qty = stoi(temp[1]);
+			parts.push_back(temp[0]);
 			qtys.push_back(qty);
 			getline(infile, contents);
 		}
 		orders.addOrder(v[0], v[1], parts, qtys);
+//		for(int i = 0; i < parts.size(); i++){
+//			cout << "parts[" << i << "] = " << parts[i] << endl;
+//		}
+//		for(int i = 0; i < qtys.size(); i++){
+//			cout << "quantity[" << i << "] = " << qtys[i] << endl;
+//		}
+//		for(int i = 0; i < v.size(); i++){
+//			cout << "V[" << i << "] = " << v[i] << endl;
+//		}
 		getline(infile, order);
 	}
+}
+void csr(AllOrders& ord){
+	int option;
+	do {
+		cout << "\n****CUSTOMER SERVICE REP****" << endl;
+		cout << "1.Add Order\n2.Delete Order\n3.Modify Existing Order\n4.Back" << endl;
+		cout << "Please enter a number 1-4: ";
+		cin >> option;
+		switch(option) {
+		case 1 :
+		{
+			int qty;
+			char ans;
+			string orderNum, custNum, partNum;
+			vector<string> parts;
+			vector<int> qtys;
+			cout << "Please enter the following customer data.\nOrder Number: ";
+			cin >> orderNum;
+			cout << "Customer Number: ";
+			cin >> custNum;
+			cout << "Did the customer order parts? Y/N: ";
+			cin >> ans;
+			while(ans == 'Y'|| ans == 'y'){
+				cout << "Part Number: ";
+				cin >> partNum;
+				parts.push_back(partNum);
+				cout << "Quantity: ";
+				cin >> qty;
+				qtys.push_back(qty);
+				cout << "Is there more to the order? Y/N: ";
+				cin >> ans;
+			}
+			ord.addOrder(orderNum, custNum, parts, qtys);
+			cout << "Order added successfully!";
+			break;
+		}
+		case 2 :
+		{
+			string orderNum;
+			bool deleted;
+			cout << "Please enter order number of order you wish to delete: ";
+			cin >> orderNum;
+			deleted = ord.deleteOrder(orderNum);
+			if(deleted){
+				cout << "Order successfully deleted!" << endl;
+			}
+			else
+				cout << "Order not found!" << endl;
+			break;
+		}
+		case 3 :
+		{
+			int option, qty, index;
+			string orderNum, partNum;
+			bool found;
+			cout << "Please enter the order number of the order you wish to modify: ";
+			cin >> orderNum;
+			for(int i = 0; i < ord._orders.size(); i++){
+				if(ord._orders[i]->getOrdnum() == orderNum){
+					//side note: try deleting existing and adding new order separately
+					found = true;
+					index = i;
+				}
+				else
+					found =  false;
+			}
+			if(found == true){
+				cout << "\n****" << orderNum << "****" << endl;
+				cout << "1.Add to order\n2.Delete from order\n3.Exit" << endl;
+				cout << "Please enter a number 1-3: ";
+				cin >> option;
+				switch(option) {
+				case 1 :
+					cout << "Enter part number: ";
+					cin >> partNum;
+					cout << "Enter quantity: ";
+					cin >> qty;
+					ord._orders[index]->getPartsV().push_back(partNum);
+				}
+			}
+		}
+		}
+	} while (option != 4);
+}
+void dumpData(Inventory& inv, AllCustomers& cust, AllOrders& ord){
+	inv.printInventory(cout);
+	cust.printCustomers(cout);
+	ord.printOrders(cout);
+}
+void menu(Inventory& inv, AllCustomers& cust, AllOrders& ord){
+	int option;
+	do {
+		cout << "\n****MAIN MENU****" << endl;
+		cout << "1.Customer Service Rep\n2.Warehouse Reveiver\n3.Warehouse Status\n4.Dump Data\n5.Exit" << endl;
+		cout << "Please enter a number 1-5: ";
+		cin >> option;
+		switch(option) {
+		case 1 :
+			csr(ord);
+			break;
+		case 2:
+			break;
+		case 3:
+			break;
+		case 4:
+			dumpData(inv, cust, ord);
+			break;
+		}
+
+	} while (option != 5);
 }
 
 int main() {
@@ -369,10 +484,8 @@ int main() {
 	initializeInventory(infile, invInit);
 	AllCustomers custInit;
 	initializeCustomers(infile, custInit);
-//	custInit.printCustomers(cout);
 	AllOrders ordInit;
 	initializeOrders(infile, ordInit);
-//	ordInit.printOrders(cout);
-	ordInit.printOrders(cout);
+	menu(invInit, custInit, ordInit);
 	return 0;
 }
